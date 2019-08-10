@@ -420,7 +420,7 @@ fn insert_metering_calls(
 ///
 /// The function fails if the module contains any operation forbidden by gas rule set, returning
 /// the original module as an Err.
-pub fn inject_gas_counter(module: elements::Module, rules: &rules::Set)
+pub fn inject_gas_counter(module: elements::Module, rules: &rules::Set, host_module_name: &str, host_func_name: &str)
 	-> Result<elements::Module, elements::Module>
 {
 	// Injecting gas counting external
@@ -433,8 +433,8 @@ pub fn inject_gas_counter(module: elements::Module, rules: &rules::Set)
 
 	mbuilder.push_import(
 		builder::import()
-			.module("env")
-			.field("gas")
+			.module(host_module_name)
+			.field(host_func_name)
 			.external().func(import_sig)
 			.build()
 		);
@@ -534,7 +534,7 @@ mod tests {
 				.build()
 			.build();
 
-		let injected_module = inject_gas_counter(module, &rules::Set::default().with_grow_cost(10000)).unwrap();
+		let injected_module = inject_gas_counter(module, &rules::Set::default().with_grow_cost(10000), "env", "gas").unwrap();
 
 		assert_eq!(
 			get_function_body(&injected_module, 0).unwrap(),
@@ -583,7 +583,7 @@ mod tests {
 				.build()
 			.build();
 
-		let injected_module = inject_gas_counter(module, &rules::Set::default()).unwrap();
+		let injected_module = inject_gas_counter(module, &rules::Set::default(), "env", "gas").unwrap();
 
 		assert_eq!(
 			get_function_body(&injected_module, 0).unwrap(),
@@ -634,7 +634,7 @@ mod tests {
 				.build()
 			.build();
 
-		let injected_module = inject_gas_counter(module, &Default::default()).unwrap();
+		let injected_module = inject_gas_counter(module, &Default::default(), "env", "gas").unwrap();
 
 		assert_eq!(
 			get_function_body(&injected_module, 1).unwrap(),
@@ -681,7 +681,7 @@ mod tests {
 
 		let rules = rules::Set::default().with_forbidden_floats();
 
-		if let Err(_) = inject_gas_counter(module, &rules) { }
+		if let Err(_) = inject_gas_counter(module, &rules, "env", "gas") { }
 		else { panic!("Should be error because of the forbidden operation")}
 
 	}
@@ -702,7 +702,7 @@ mod tests {
 				let input_module = parse_wat($input);
 				let expected_module = parse_wat($expected);
 
-				let injected_module = inject_gas_counter(input_module, &Default::default())
+				let injected_module = inject_gas_counter(input_module, &Default::default(), "env", "gas")
 					.expect("inject_gas_counter call failed");
 
 				let actual_func_body = get_function_body(&injected_module, 0)
